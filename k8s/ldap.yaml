@@ -1,0 +1,109 @@
+# Bootstrap LDIF ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ldap-bootstrap
+data:
+  bootstrap.ldif: |
+    dn: ou=people,dc=example,dc=org
+    objectClass: organizationalUnit
+    ou: people
+    
+    dn: uid=dahituv,ou=people,dc=example,dc=org
+    objectClass: inetOrgPerson
+    objectClass: posixAccount
+    objectClass: shadowAccount
+    uid: dahituv
+    cn: Dvir Ahituv
+    sn: Ahituv
+    givenName: Dvir
+    mail: dviroachitov@gmail.com
+    userPassword: password123
+    uidNumber: 10000
+    gidNumber: 10000
+    homeDirectory: /home/dvir
+    loginShell: /bin/bash
+    description: JBSWY3DPEHPK3PXP
+---
+# LDAP Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ldap-service
+spec:
+  selector:
+    app: ldap
+  ports:
+  - port: 389
+    targetPort: 389
+  type: ClusterIP
+---
+# LDAP Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ldap
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ldap
+  template:
+    metadata:
+      labels:
+        app: ldap
+    spec:
+      hostname: ldap
+      initContainers:
+      - name: copy-bootstrap
+        image: busybox
+        command: 
+        - sh
+        - -c
+        - |
+          echo "Copying bootstrap files..."
+          ls -la /bootstrap-ro/
+          cp -v /bootstrap-ro/* /bootstrap/ || echo "Copy failed"
+          chmod -R 777 /bootstrap
+          echo "Files in /bootstrap:"
+          ls -la /bootstrap/
+        volumeMounts:
+        - name: bootstrap-ro
+          mountPath: /bootstrap-ro
+        - name: bootstrap-rw
+          mountPath: /bootstrap
+      containers:
+      - name: ldap
+        image: osixia/openldap:latest
+        ports:
+        - containerPort: 389
+        env:
+        - name: LDAP_ORGANISATION
+          value: "Example Inc."
+        - name: LDAP_DOMAIN
+          value: "example.org"
+        - name: LDAP_ADMIN_PASSWORD
+          value: "admin"
+        - name: LDAP_REMOVE_CONFIG_AFTER_SETUP
+          value: "false"
+        - name: HOSTNAME
+          value: "ldap"
+        - name: LDAP_PORT
+          value: "389"
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/ldap
+        - name: config
+          mountPath: /etc/ldap/slapd.d
+        - name: bootstrap-rw
+          mountPath: /container/service/slapd/assets/config/bootstrap/ldif/custom
+      volumes:
+      - name: bootstrap-ro
+        configMap:
+          name: ldap-bootstrap
+      - name: bootstrap-rw
+        emptyDir: {}
+      - name: data
+        emptyDir: {}
+      - name: config
+        emptyDir: {}
