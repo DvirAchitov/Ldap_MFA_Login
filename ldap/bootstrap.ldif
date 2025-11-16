@@ -1,0 +1,19 @@
+dn: ou=people,dc=example,dc=org
+objectClass: organizationalUnit
+ou: people
+
+dn: uid=dahituv,ou=people,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: dahituv
+cn: Dvir Ahituv
+sn: Ahituv
+givenName: Dvir
+mail: dviroachitov@gmail.com
+userPassword: password123
+uidNumber: 10000
+gidNumber: 10000
+homeDirectory: /home/dvir
+loginShell: /bin/bash
+description: JBSWY3DPEHPK3PXP
